@@ -7,6 +7,7 @@ import (
 	"time"
 
 	{{.importPackage}}
+	"github.com/rancher/lasso/pkg/grapher"
 	"github.com/rancher/norman/objectclient"
 	"github.com/rancher/norman/controller"
 	"github.com/rancher/norman/resource"
@@ -85,6 +86,7 @@ type {{.schema.CodeName}}Controller interface {
 	AddClusterScopedFeatureHandler(ctx context.Context, enabled func() bool, name, clusterName string, handler {{.schema.CodeName}}HandlerFunc)
 	Enqueue(namespace, name string)
 	EnqueueAfter(namespace, name string, after time.Duration)
+	GroupVersionKind() schema.GroupVersionKind
 }
 
 type {{.schema.CodeName}}Interface interface {
@@ -164,6 +166,7 @@ func (c *{{.schema.ID}}Controller) Lister() {{.schema.CodeName}}Lister {
 
 func (c *{{.schema.ID}}Controller) AddHandler(ctx context.Context, name string, handler {{.schema.CodeName}}HandlerFunc) {
 	c.GenericController.AddHandler(ctx, name, func(key string, obj interface{}) (interface{}, error) {
+		grapher.Record(grapher.Event{Kind: "Handler called", GVK: {{.schema.CodeName}}GroupVersionKind.String(), Key: key, Name: name, Function: grapher.HandlerFuncName(handler)})
 		if obj == nil {
 			return handler(key, nil)
 		} else if v, ok := obj.(*{{.prefix}}{{.schema.CodeName}}); ok {
@@ -176,6 +179,7 @@ func (c *{{.schema.ID}}Controller) AddHandler(ctx context.Context, name string, 
 
 func (c *{{.schema.ID}}Controller) AddFeatureHandler(ctx context.Context, enabled func() bool, name string, handler {{.schema.CodeName}}HandlerFunc) {
 	c.GenericController.AddHandler(ctx, name, func(key string, obj interface{}) (interface{}, error) {
+		grapher.Record(grapher.Event{Kind: "Handler called", GVK: {{.schema.CodeName}}GroupVersionKind.String(), Key: key, Name: name, Function: grapher.HandlerFuncName(handler)})
 		if !enabled() {
 			return nil, nil
 		} else if obj == nil {
@@ -190,6 +194,7 @@ func (c *{{.schema.ID}}Controller) AddFeatureHandler(ctx context.Context, enable
 
 func (c *{{.schema.ID}}Controller) AddClusterScopedHandler(ctx context.Context, name, cluster string, handler {{.schema.CodeName}}HandlerFunc) {
 	c.GenericController.AddHandler(ctx, name, func(key string, obj interface{}) (interface{}, error) {
+		grapher.Record(grapher.Event{Kind: "Handler called", GVK: {{.schema.CodeName}}GroupVersionKind.String(), Key: key, Name: name, Function: grapher.HandlerFuncName(handler)})
 		if obj == nil {
 			return handler(key, nil)
 		} else if v, ok := obj.(*{{.prefix}}{{.schema.CodeName}}); ok && controller.ObjectInCluster(cluster, obj) {
@@ -202,6 +207,7 @@ func (c *{{.schema.ID}}Controller) AddClusterScopedHandler(ctx context.Context, 
 
 func (c *{{.schema.ID}}Controller) AddClusterScopedFeatureHandler(ctx context.Context, enabled func() bool, name, cluster string, handler {{.schema.CodeName}}HandlerFunc) {
 	c.GenericController.AddHandler(ctx, name, func(key string, obj interface{}) (interface{}, error) {
+		grapher.Record(grapher.Event{Kind: "Handler called", GVK: {{.schema.CodeName}}GroupVersionKind.String(), Key: key, Name: name, Function: grapher.HandlerFuncName(handler)})
 		if !enabled() {
 			return nil, nil
 		} else if obj == nil {
@@ -212,6 +218,10 @@ func (c *{{.schema.ID}}Controller) AddClusterScopedFeatureHandler(ctx context.Co
 			return nil, nil
 		}
 	})
+}
+
+func (c *{{.schema.ID}}Controller) GroupVersionKind() schema.GroupVersionKind {
+	return {{.schema.CodeName}}GroupVersionKind
 }
 
 type {{.schema.ID}}Factory struct {
